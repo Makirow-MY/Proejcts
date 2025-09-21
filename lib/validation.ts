@@ -6,10 +6,10 @@ export const UserFormValidation = z.object({
     .min(5, "Name must be at least 5 characters")
     .max(50, "Name must be at most 50 characters"),
   email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters").max(30, "Maximum characters exceeded"),
   phone: z
     .string()
     .refine((phone) => /^\+\d{10,15}$/.test(phone), "Invalid phone number"),
- 
 });
 
 export const PatientFormValidation = z.object({
@@ -18,7 +18,6 @@ export const PatientFormValidation = z.object({
     .min(2, "Name must be at least 2 characters")
     .max(50, "Name must be at most 50 characters"),
   email: z.string().email("Invalid email address"),
-  
   phone: z
     .string()
     .refine((phone) => /^\+\d{10,15}$/.test(phone), "Invalid phone number"),
@@ -31,7 +30,8 @@ export const PatientFormValidation = z.object({
   occupation: z
     .string()
     .min(2, "Occupation must be at least 2 characters")
-    .max(500, "Occupation must be at most 500 characters"),
+    .max(500, "Occupation must be at most 500 characters")
+    .optional(),
   emergencyContactName: z
     .string()
     .min(2, "Contact name must be at least 2 characters")
@@ -42,15 +42,12 @@ export const PatientFormValidation = z.object({
       (emergencyContactNumber) => /^\+\d{10,15}$/.test(emergencyContactNumber),
       "Invalid phone number"
     ),
-    primaryPhysician: z.string().min(2, "Select at least one doctor"),
+  primaryPhysician: z.string().min(2, "Select at least one doctor"),
   insuranceProvider: z
     .string()
     .min(2, "Insurance name must be at least 2 characters")
-    .max(50, "Insurance name must be at most 50 characters"),
-  insurancePolicyNumber: z
-    .string()
-    .min(2, "Policy number must be at least 2 characters")
-    .max(50, "Policy number must be at most 50 characters"),
+    .max(50, "Insurance name must be at most 50 characters")
+    .optional(),
   allergies: z.string().optional(),
   currentMedication: z.string().optional(),
   familyMedicalHistory: z.string().optional(),
@@ -62,19 +59,19 @@ export const PatientFormValidation = z.object({
     .boolean()
     .default(false)
     .refine((value) => value === true, {
-      message: "You must consent to treatment in order to proceed",
+      message: "You must consent to treatment to proceed",
     }),
   disclosureConsent: z
     .boolean()
     .default(false)
     .refine((value) => value === true, {
-      message: "You must consent to disclosure in order to proceed",
+      message: "You must consent to disclosure to proceed",
     }),
   privacyConsent: z
     .boolean()
     .default(false)
     .refine((value) => value === true, {
-      message: "You must consent to privacy in order to proceed",
+      message: "You must consent to privacy to proceed",
     }),
 });
 

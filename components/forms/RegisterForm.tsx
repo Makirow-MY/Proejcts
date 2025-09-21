@@ -1,12 +1,11 @@
 "use client";
-
 import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-
+import { toast } from "react-toastify";
 import { Form, FormControl } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -19,7 +18,6 @@ import {
 } from "@/constants";
 import { registerPatient, registerPatientID } from "@/lib/actions/patient.actions";
 import { PatientFormValidation } from "@/lib/validation";
-
 import "react-datepicker/dist/react-datepicker.css";
 import "react-phone-number-input/style.css";
 import CustomFormField, { FormFieldType } from "../CustomFormField";
@@ -37,91 +35,85 @@ const RegisterForm = ({ user }: { user: User }) => {
       name: user.name,
       email: user.email,
       phone: user.phone,
-        },
+    },
   });
 
   const onSubmit = async (values: z.infer<typeof PatientFormValidation>) => {
     setIsLoading(true);
-
-    // Store file info in form data as
-    let formData;
-    if (
-      values.identificationDocument &&
-      values.identificationDocument?.length > 0
-    ) {
-      const blobFile = new Blob([values.identificationDocument[0]], {
-        type: values.identificationDocument[0].type,
-      });
-console.log(blobFile)
-      formData = new FormData();
-      formData.append("blobFile", blobFile);
-      formData.append("fileName", values.identificationDocument[0].name);
-    }
-
     try {
-      const Identificationdocument = {
-          userId: user.$id,
-          identificationType: values.identificationType,
-          identificationNumber: values.identificationNumber,
-          identificationDocument: values.identificationDocument
-          ? formData
-          : undefined,
+      // Prepare form data for identification document
+      let formData;
+      if (values.identificationDocument?.length > 0) {
+        const blobFile = new Blob([values.identificationDocument[0]], {
+          type: values.identificationDocument[0].type,
+        });
+        console.log("Blob file created:", blobFile);
+        formData = new FormData();
+        formData.append("blobFile", blobFile);
+        formData.append("fileName", values.identificationDocument[0].name);
       }
-      const patientIdDoc = await registerPatientID(Identificationdocument);
-      if (patientIdDoc) {
-        const patient = {
-          userId: user.$id,
-          name: values.name,
-          email: values.email,
-          phone: values.phone,
-          birthDate: new Date(values.birthDate),
-          gender: values.gender,
-          address: values.address,
-          occupation: values.occupation,
-          emergencyContactName: values.emergencyContactName,
-          emergencyContactNumber: values.emergencyContactNumber,
-          primaryPhysician: values.primaryPhysician,
-          insuranceProvider: values.insuranceProvider,
-          allergies: values.allergies,
-          currentMedication: values.currentMedication,
-          familyMedicalHistory: values.familyMedicalHistory,
-          pastMedicalHistory: values.pastMedicalHistory,        
-          privacyConsent: values.privacyConsent,
-          documentId: patientIdDoc.$id ? patientIdDoc.$id : null,
-        };
-  
-        const newPatient = await registerPatient(patient);
-  
-        if (newPatient) {
-          router.push(`/patients/${user.$id}/new-appointment`);
-        }
-      }
-   
-    } catch (error) {
-      console.log(error);
-    }
 
-    setIsLoading(false);
+      // Register patient identification document
+      const identificationDocumentParams = {
+        userId: user.$id,
+        identificationType: values.identificationType || null,
+        identificationNumber: values.identificationNumber || null,
+        identificationDocument: formData,
+      };
+      const patientIdDoc = await registerPatientID(identificationDocumentParams);
+      if (!patientIdDoc && values.identificationType) {
+        toast.info("Identification document registration skipped (no file provided).");
+      }
+
+      // Register patient
+      const patient = {
+        userId: user.$id,
+        name: values.name,
+        email: values.email,
+        phone: values.phone,
+        birthDate: new Date(values.birthDate),
+        gender: values.gender,
+        address: values.address,
+        occupation: values.occupation || null,
+        emergencyContactName: values.emergencyContactName,
+        emergencyContactNumber: values.emergencyContactNumber,
+        primaryPhysician: values.primaryPhysician,
+        insuranceProvider: values.insuranceProvider || null,
+        allergies: values.allergies || null,
+        currentMedication: values.currentMedication || null,
+        familyMedicalHistory: values.familyMedicalHistory || null,
+        pastMedicalHistory: values.pastMedicalHistory || null,
+        privacyConsent: values.privacyConsent,
+        documentId: patientIdDoc?.$id || null,
+      };
+
+      const newPatient = await registerPatient(patient);
+      if (newPatient) {
+        toast.success("Patient registered successfully!");
+        router.push(`/patients/${user.$id}/new-appointment`);
+      } else {
+        throw new Error("Failed to register patient");
+      }
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      toast.error(`Failed to register patient: ${error.message || "Unknown error"}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="flex-1 space-y-12"
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 space-y-12">
         <section className="space-y-4">
           <h1 className="header">Welcome 👋</h1>
           <p className="text-dark-700">Let us know more about yourself.</p>
         </section>
-
         <section className="space-y-6">
           <div className="mb-9 space-y-1">
             <h2 className="sub-header">Personal Information</h2>
           </div>
-
           {/* NAME */}
-
           <CustomFormField
             fieldType={FormFieldType.INPUT}
             control={form.control}
@@ -130,7 +122,6 @@ console.log(blobFile)
             iconSrc="/assets/icons/user.svg"
             iconAlt="user"
           />
-
           {/* EMAIL & PHONE */}
           <div className="flex flex-col gap-6 xl:flex-row">
             <CustomFormField
@@ -142,7 +133,6 @@ console.log(blobFile)
               iconSrc="/assets/icons/email.svg"
               iconAlt="email"
             />
-
             <CustomFormField
               fieldType={FormFieldType.PHONE_INPUT}
               control={form.control}
@@ -151,7 +141,6 @@ console.log(blobFile)
               placeholder="(555) 123-4567"
             />
           </div>
-
           {/* BirthDate & Gender */}
           <div className="flex flex-col gap-6 xl:flex-row">
             <CustomFormField
@@ -160,7 +149,6 @@ console.log(blobFile)
               name="birthDate"
               label="Date of birth"
             />
-
             <CustomFormField
               fieldType={FormFieldType.SKELETON}
               control={form.control}
@@ -177,7 +165,11 @@ console.log(blobFile)
                       <div key={option + i} className="radio-group">
                         <RadioGroupItem value={option} id={option} />
                         <Label htmlFor={option} className="cursor-pointer">
-                          {option.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1))}
+                          {option
+                            .toLowerCase()
+                            .split(" ")
+                            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                            .join(" ")}
                         </Label>
                       </div>
                     ))}
@@ -186,7 +178,6 @@ console.log(blobFile)
               )}
             />
           </div>
-
           {/* Address & Occupation */}
           <div className="flex flex-col gap-6 xl:flex-row">
             <CustomFormField
@@ -194,18 +185,16 @@ console.log(blobFile)
               control={form.control}
               name="address"
               label="Address"
-              placeholder="14 street, New york, NY - 5101"
+              placeholder="14 street, New York, NY - 5101"
             />
-
             <CustomFormField
               fieldType={FormFieldType.INPUT}
               control={form.control}
               name="occupation"
               label="Occupation"
-              placeholder=" Software Engineer"
+              placeholder="Software Engineer"
             />
           </div>
-
           {/* Emergency Contact Name & Emergency Contact Number */}
           <div className="flex flex-col gap-6 xl:flex-row">
             <CustomFormField
@@ -215,7 +204,6 @@ console.log(blobFile)
               label="Emergency contact name"
               placeholder="Guardian's name"
             />
-
             <CustomFormField
               fieldType={FormFieldType.PHONE_INPUT}
               control={form.control}
@@ -225,12 +213,10 @@ console.log(blobFile)
             />
           </div>
         </section>
-
         <section className="space-y-6">
           <div className="mb-9 space-y-1">
             <h2 className="sub-header">Medical Information</h2>
           </div>
-
           {/* PRIMARY CARE PHYSICIAN */}
           <CustomFormField
             fieldType={FormFieldType.SELECT}
@@ -254,7 +240,6 @@ console.log(blobFile)
               </SelectItem>
             ))}
           </CustomFormField>
-
           {/* INSURANCE & POLICY NUMBER */}
           <div className="flex flex-col gap-6 xl:flex-row">
             <CustomFormField
@@ -264,9 +249,7 @@ console.log(blobFile)
               label="Insurance provider"
               placeholder="BlueCross BlueShield"
             />
-
           </div>
-
           {/* ALLERGY & CURRENT MEDICATIONS */}
           <div className="flex flex-col gap-6 xl:flex-row">
             <CustomFormField
@@ -276,7 +259,6 @@ console.log(blobFile)
               label="Allergies (if any)"
               placeholder="Peanuts, Penicillin, Pollen"
             />
-
             <CustomFormField
               fieldType={FormFieldType.TEXTAREA}
               control={form.control}
@@ -285,17 +267,15 @@ console.log(blobFile)
               placeholder="Ibuprofen 200mg, Levothyroxine 50mcg"
             />
           </div>
-
           {/* FAMILY MEDICATION & PAST MEDICATIONS */}
           <div className="flex flex-col gap-6 xl:flex-row">
             <CustomFormField
               fieldType={FormFieldType.TEXTAREA}
               control={form.control}
               name="familyMedicalHistory"
-              label=" Family medical history (if relevant)"
+              label="Family medical history (if relevant)"
               placeholder="Mother had brain cancer, Father has hypertension"
             />
-
             <CustomFormField
               fieldType={FormFieldType.TEXTAREA}
               control={form.control}
@@ -305,12 +285,10 @@ console.log(blobFile)
             />
           </div>
         </section>
-
         <section className="space-y-6">
           <div className="mb-9 space-y-1">
-            <h2 className="sub-header">Identification and Verfication</h2>
+            <h2 className="sub-header">Identification and Verification</h2>
           </div>
-
           <CustomFormField
             fieldType={FormFieldType.SELECT}
             control={form.control}
@@ -324,7 +302,6 @@ console.log(blobFile)
               </SelectItem>
             ))}
           </CustomFormField>
-
           <CustomFormField
             fieldType={FormFieldType.INPUT}
             control={form.control}
@@ -332,7 +309,6 @@ console.log(blobFile)
             label="Identification Number"
             placeholder="123456789"
           />
-
           <CustomFormField
             fieldType={FormFieldType.SKELETON}
             control={form.control}
@@ -345,36 +321,29 @@ console.log(blobFile)
             )}
           />
         </section>
-
         <section className="space-y-6">
           <div className="mb-9 space-y-1">
             <h2 className="sub-header">Consent and Privacy</h2>
           </div>
-
           <CustomFormField
             fieldType={FormFieldType.CHECKBOX}
             control={form.control}
             name="treatmentConsent"
             label="I consent to receive treatment for my health condition."
           />
-
           <CustomFormField
             fieldType={FormFieldType.CHECKBOX}
             control={form.control}
             name="disclosureConsent"
-            label="I consent to the use and disclosure of my health
-            information for treatment purposes."
+            label="I consent to the use and disclosure of my health information for treatment purposes."
           />
-
           <CustomFormField
             fieldType={FormFieldType.CHECKBOX}
             control={form.control}
             name="privacyConsent"
-            label="I acknowledge that I have reviewed and agree to the
-            privacy policy"
+            label="I acknowledge that I have reviewed and agree to the privacy policy"
           />
         </section>
-
         <SubmitButton isLoading={isLoading}>Submit and Continue</SubmitButton>
       </form>
     </Form>

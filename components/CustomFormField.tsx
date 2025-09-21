@@ -52,6 +52,7 @@ const RenderInput = ({ field, props }: { field: any; props: CustomProps }) => {
           {props.iconSrc && (
             <Image
               src={props.iconSrc}
+              style={{color:'white'}}
               height={24}
               width={24}
               alt={props.iconAlt || "icon"}
@@ -84,6 +85,7 @@ const RenderInput = ({ field, props }: { field: any; props: CustomProps }) => {
           {props.iconSrc && (
             <Image
               src={props.iconSrc}
+             style={{color:'white'}}
               height={24}
               width={24}
               alt={props.iconAlt || "icon"}

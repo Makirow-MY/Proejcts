@@ -4,6 +4,7 @@ import { Plus_Jakarta_Sans as FontSans } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 
 import { cn } from "@/lib/utils";
+import { ToastContainer } from "react-toastify";
 
 const fontSans = FontSans({
   subsets: ["latin"],
@@ -33,6 +34,18 @@ export default function RootLayout({
           fontSans.variable
         )}
       >
+        <ToastContainer
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={true}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="dark" // or "dark" to match your app's theme
+        />
         <ThemeProvider attribute="class" defaultTheme="dark">
           {children}
         </ThemeProvider>

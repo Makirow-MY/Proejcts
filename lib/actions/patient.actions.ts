@@ -1,7 +1,5 @@
 "use server";
-
 import { ID, InputFile, Query } from "node-appwrite";
-
 import {
   BUCKET_ID,
   DATABASE_ID,
@@ -19,25 +17,39 @@ import { IdentificationTypes } from "@/constants";
 // CREATE APPWRITE USER
 export const createUser = async (user: CreateUserParams) => {
   try {
-    // Create new user -> https://appwrite.io/docs/references/1.5.x/server-nodejs/users#create
-    const newuser = await users.create(
+    console.log("Register User", { ...user, password: "[REDACTED]" });
+    const newUser = await users.create(
       ID.unique(),
       user.email,
       user.phone,
-      user.name,       
+      user.password,
+      user.name
     );
-
-    return parseStringify(newuser);
+    return parseStringify(newUser);
   } catch (error: any) {
-    // Check existing user
-    if (error && error?.code === 409) {
-      const existingUser = await users.list([
-        Query.equal("email", [user.email]),
-      ]);
-
-      return existingUser.users[0];
-    }
     console.error("An error occurred while creating a new user:", error);
+    if (error?.code === 409) {
+      try {
+        const existingUsers = await users.list([
+          Query.equal("email", [user.email]),
+        ]);
+        if (existingUsers.users.length > 0) {
+          const existingUser = existingUsers.users[0];
+          console.log("User already exists:", existingUser);
+          return parseStringify(existingUser);
+        } else {
+          console.error("User conflict but no existing user found");
+          console.log("User conflict but no existing user found");
+        }
+      } catch (listError: any) {
+        console.error("Error listing existing users:", listError);
+        console.log(`Failed to verify existing user: ${listError.message}`);
+      }
+    }
+    if (error.code === 400) {
+      console.log(`Invalid user data: ${error.message}`);
+    }
+    throw error;
   }
 };
 
@@ -45,82 +57,74 @@ export const createUser = async (user: CreateUserParams) => {
 export const getUser = async (userId: string) => {
   try {
     const user = await users.get(userId);
-
     return parseStringify(user);
-  } catch (error) {
-    console.error(
-      "An error occurred while retrieving the user details:",
-      error
-    );
+  } catch (error: any) {
+    console.error("An error occurred while retrieving the user details:", error);
+    if (error.code === 404) {
+      console.log(`User not found: ${userId}`);
+    }
+    throw error;
   }
 };
 
-// REGISTER PATIENT
+// REGISTER PATIENT ID (IDENTIFICATION DOCUMENT)
 export const registerPatientID = async ({
   identificationDocument,
-  ...Identificationdocument
+  ...identificationDocumentParams
 }: RegisterUserDocParams) => {
-  console.log("...Identificationdocument",Identificationdocument);
+  console.log("...identificationDocumentParams", identificationDocumentParams);
   try {
-    // Upload file ->  // https://appwrite.io/docs/references/cloud/client-web/storage#createFile
     let file;
     if (identificationDocument) {
       console.log("identificationDocument", identificationDocument);
-      const inputFile =
-        identificationDocument &&
-        InputFile.fromBlob(
-          identificationDocument?.get("blobFile") as Blob,
-          identificationDocument?.get("fileName") as string
-        );
-
+      const inputFile = InputFile.fromBlob(
+        identificationDocument.get("blobFile") as Blob,
+        identificationDocument.get("fileName") as string
+      );
       file = await storage.createFile(BUCKET_ID!, ID.unique(), inputFile);
+    }
 
-      const newPatient = await databases.createDocument(
+    const newPatient = await databases.createDocument(
       DATABASE_ID!,
       IDENTIFICATION_DOCUMENT!,
       ID.unique(),
       {
-        userId: Identificationdocument.userId,
-        identificationType: Identificationdocument.identificationType,
-        identificationNumber: Identificationdocument.identificationNumber,
-        identificationDocumentId: file?.$id ? file.$id : null,
+        userId: identificationDocumentParams.userId,
+        identificationType: identificationDocumentParams.identificationType || null,
+        identificationNumber: identificationDocumentParams.identificationNumber || null,
+        identificationDocumentId: file?.$id || null,
         identificationDocumentUrl: file?.$id
-          ? `${ENDPOINT}/storage/buckets/${BUCKET_ID}/files/${file.$id}/view??project=${PROJECT_ID}`
+          ? `${ENDPOINT}/storage/buckets/${BUCKET_ID}/files/${file.$id}/view?project=${PROJECT_ID}`
           : null,
       }
     );
-
-    console.log("{Document newPatient}", {newPatient});
+    console.log("{Document newPatient}", { newPatient });
     return parseStringify(newPatient);
-
-    }
-    
-  } catch (error) {
-    console.error("An error occurred while creating a new patient:", error);
+  } catch (error: any) {
+    console.error("An error occurred while creating a new patient ID:", error);
+    console.log(`Failed to register patient ID: ${error.message}`);
   }
 };
 
+// REGISTER PATIENT
 export const registerPatient = async ({
-   ...patient
+  ...patient
 }: RegisterUserParams) => {
-  console.log("...patient",patient.email);
+  console.log("...patient", patient.email);
   try {
-
-    // Create new patient document -> https://appwrite.io/docs/references/cloud/server-nodejs/databases#createDocument
     const newPatient = await databases.createDocument(
       DATABASE_ID!,
       PATIENT_COLLECTION_ID!,
       ID.unique(),
-      {        
+      {
         ...patient,
       }
     );
-   
-    //IDENTIFICATION_DOCUMENT
-console.log("{newPatient}", {newPatient})
+    console.log("{newPatient}", { newPatient });
     return parseStringify(newPatient);
-  } catch (error) {
+  } catch (error: any) {
     console.error("An error occurred while creating a new patient:", error);
+    console.log(`Failed to register patient: ${error.message}`);
   }
 };
 
@@ -132,12 +136,13 @@ export const getPatient = async (userId: string) => {
       PATIENT_COLLECTION_ID!,
       [Query.equal("userId", [userId])]
     );
-
+    if (patients.documents.length === 0) {
+      console.log(`No patient found for userId: ${userId}`);
+      return null;
+    }
     return parseStringify(patients.documents[0]);
-  } catch (error) {
-    console.error(
-      "An error occurred while retrieving the patient details:",
-      error
-    );
+  } catch (error: any) {
+    console.error("An error occurred while retrieving the patient details:", error);
+    console.log(`Failed to retrieve patient: ${error.message}`);
   }
 };
