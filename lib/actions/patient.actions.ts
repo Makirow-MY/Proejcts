@@ -110,17 +110,18 @@ export const registerPatientID = async ({
 export const registerPatient = async ({
   ...patient
 }: RegisterUserParams) => {
-  console.log("...patient", patient.email);
+   console.log("{newPatient}",  patient);
+   const { password, ...patientDataWithoutPassword } = patient;
   try {
     const newPatient = await databases.createDocument(
       DATABASE_ID!,
       PATIENT_COLLECTION_ID!,
       ID.unique(),
       {
-        ...patient,
+        ...patientDataWithoutPassword,
       }
     );
-    console.log("{newPatient}", { newPatient });
+   
     return parseStringify(newPatient);
   } catch (error: any) {
     console.error("An error occurred while creating a new patient:", error);

@@ -42,8 +42,8 @@ const RegisterForm = ({ user }: { user: User }) => {
     setIsLoading(true);
     try {
       // Prepare form data for identification document
-      let formData;
-      if (values.identificationDocument?.length > 0) {
+      let formData: FormData | undefined;
+      if (values.identificationDocument && values.identificationDocument.length > 0) {
         const blobFile = new Blob([values.identificationDocument[0]], {
           type: values.identificationDocument[0].type,
         });
@@ -56,8 +56,8 @@ const RegisterForm = ({ user }: { user: User }) => {
       // Register patient identification document
       const identificationDocumentParams = {
         userId: user.$id,
-        identificationType: values.identificationType || null,
-        identificationNumber: values.identificationNumber || null,
+        identificationType: values.identificationType ?? undefined,
+        identificationNumber: values.identificationNumber ?? undefined,
         identificationDocument: formData,
       };
       const patientIdDoc = await registerPatientID(identificationDocumentParams);
@@ -70,23 +70,23 @@ const RegisterForm = ({ user }: { user: User }) => {
         userId: user.$id,
         name: values.name,
         email: values.email,
+        password: "Makiapassword123.",
         phone: values.phone,
         birthDate: new Date(values.birthDate),
         gender: values.gender,
         address: values.address,
-        occupation: values.occupation || null,
+        occupation: values.occupation ?? "",
         emergencyContactName: values.emergencyContactName,
         emergencyContactNumber: values.emergencyContactNumber,
         primaryPhysician: values.primaryPhysician,
-        insuranceProvider: values.insuranceProvider || null,
-        allergies: values.allergies || null,
-        currentMedication: values.currentMedication || null,
-        familyMedicalHistory: values.familyMedicalHistory || null,
-        pastMedicalHistory: values.pastMedicalHistory || null,
+        insuranceProvider: values.insuranceProvider ?? "",
+        allergies: values.allergies ?? "",
+        currentMedication: values.currentMedication ?? "",
+        familyMedicalHistory: values.familyMedicalHistory ?? "",
+        pastMedicalHistory: values.pastMedicalHistory ?? '',
         privacyConsent: values.privacyConsent,
-        documentId: patientIdDoc?.$id || null,
+        documentId: patientIdDoc?.$id ?? undefined,
       };
-
       const newPatient = await registerPatient(patient);
       if (newPatient) {
         toast.success("Patient registered successfully!");

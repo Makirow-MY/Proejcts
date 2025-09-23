@@ -80,6 +80,7 @@ export const AppointmentForm = ({
           reason: values.reason!,
           status: status as Status,
           note: values.note,
+           timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         };
 
         const newAppointment = await createAppointment(appointment);
@@ -94,6 +95,7 @@ export const AppointmentForm = ({
         const appointmentToUpdate = {
           userId,
           appointmentId: appointment?.$id!,
+          timeZone:  Intl.DateTimeFormat().resolvedOptions().timeZone,
           appointment: {
             primaryPhysician: values.primaryPhysician,
             schedule: new Date(values.schedule),
